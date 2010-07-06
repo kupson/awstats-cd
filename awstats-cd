@@ -16,7 +16,10 @@ my $show_help = 0;
 
 # parse command line options
 GetOptions(
-    'help|?' => \$show_help,
+    'title=s'   => \$title,
+    'sort_by=s' => \$sort_by,
+    'html!'     => \$do_html,
+    'help|?'    => \$show_help,
 ) or pod2usage(2);
 
 if (@ARGV == 0) {
@@ -184,6 +187,23 @@ All files should be passed at once on command line. Some examples:
 =head1 OPTIONS
 
 =over 4
+
+=item B<--title>
+
+Change page title. Default is 'AWStats Totals'
+
+=item B<--sort_by=FIELD>
+
+Sort statistics by field. Available: unique, visits, pages, hits and (default)
+bandwidth.
+
+=item B<--no-html>
+
+Disable html output.
+
+=item B<--help>
+
+Show this help message.
 
 =back
 
