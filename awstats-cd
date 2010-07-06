@@ -10,13 +10,15 @@ our $VERSION = '0.10';
 
 # default values
 my $title     = 'AWStats Totals';
-my $do_html   = 1;
+my $html_len  = 20;
 my $sort_by   = 'bandwidth';
+my $do_html   = 1;
 my $show_help = 0;
 
 # parse command line options
 GetOptions(
     'title=s'   => \$title,
+    'length=i'  => \$html_len,
     'sort_by=s' => \$sort_by,
     'html!'     => \$do_html,
     'help|?'    => \$show_help,
@@ -40,11 +42,14 @@ my %stats;
 # main loop - for each filename 
 for my $filename (@ARGV) {
 
+    # get domain name
     my $domain;
     given ($filename) {
+        # different DataDir per domain
         when (m{(?<domain>[^/]+)/awstats\d{6}\.txt\z}xms) {
             $domain = $+{domain};
         }
+        # different config file name per domain
         when (m{awstats\d{6}\.(?<domain>.+)\.txt\z}xms) {
             $domain = $+{domain};
         }
@@ -87,11 +92,17 @@ td.r { text-align: right; }
 <td class="c" width="80" bgcolor="#2EA495">Bandwidth (MiB)</td>
 </tr>
 EOH
+
+    my $domain_counter = $html_len;
+
+    DOMAIN:
     for my $domain (sort {
         ($stats{$b}->{$sort_by} || 0)
             <=>
         ($stats{$a}->{$sort_by} || 0)
     } keys %stats) {
+        last DOMAIN unless $domain_counter--;
+
         my $unique    = $stats{$domain}->{'unique'}    || 0;
         my $visits    = $stats{$domain}->{'visits'}    || 0;
         my $pages     = $stats{$domain}->{'pages'}     || 0;
@@ -191,6 +202,10 @@ All files should be passed at once on command line. Some examples:
 =item B<--title>
 
 Change page title. Default is 'AWStats Totals'
+
+=item B<--length=NUMBER>
+
+Show NUMBER of domains on html page (default 20).
 
 =item B<--sort_by=FIELD>
 
