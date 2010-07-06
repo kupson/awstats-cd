@@ -49,7 +49,7 @@ for my $filename (@ARGV) {
             $domain = $+{domain};
         }
         default {
-            die "unrecognized filename format";
+            die "unrecognized filename format ($filename)\n";
         }
     }
 
