@@ -1,0 +1,196 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use 5.010_000;
+
+use Getopt::Long;
+use Pod::Usage;
+
+our $VERSION = '0.10';
+
+# default values
+my $title     = 'AWStats Totals';
+my $do_html   = 1;
+my $sort_by   = 'bandwidth';
+my $show_help = 0;
+
+# parse command line options
+GetOptions(
+    'help|?' => \$show_help,
+) or pod2usage(2);
+
+if (@ARGV == 0) {
+    $show_help = 1;
+    warn "No files given.\n";
+}
+pod2usage(1) if $show_help;
+
+
+# global variables
+my %handlers = (
+    'general' => \&section_general,
+    'day'     => \&section_day,
+);
+
+my %stats;
+
+# main loop - for each filename 
+for my $filename (@ARGV) {
+
+    my $domain;
+    given ($filename) {
+        when (m{(?<domain>[^/]+)/awstats\d{6}\.txt\z}xms) {
+            $domain = $+{domain};
+        }
+        when (m{awstats\d{6}\.(?<domain>.+)\.txt\z}xms) {
+            $domain = $+{domain};
+        }
+        default {
+            die "unrecognized filename format";
+        }
+    }
+
+    open (my $fh, '<', $filename) or die "open($filename): $!";
+    parse_logfile($fh, $domain);
+    close $fh;
+}
+
+write_html() if $do_html;
+
+exit;
+
+sub write_html {
+    print <<"EOH";
+<!DOCTYPE HTML PUBLIC -//W3C//DTD HTML 4.01 Transitional//EN>
+<html>
+<head>
+<title>$title</title>
+<style type="text/css">
+body { font: 11px verdana,arial,helvetica,sans-serif; background-color: white }
+td   { font: 11px verdana,arial,helvetica,sans-serif; text-align: center; color: black }
+td.c { text-align: center; }
+td.l { text-align: left; }
+td.r { text-align: right; }
+</style>
+</head>
+<body>
+<table align="center">
+<tr>
+<td class="l" bgcolor="#ECECEC">&nbsp;Statistics of</td>
+<td class="c" width="80" bgcolor="#FFB055">Unique visitors</td>
+<td class="c" width="80" bgcolor="#F8E880">Number of visits</td>
+<td class="c" width="80" bgcolor="#4477DD">Pages</td>
+<td class="c" width="80" bgcolor="#66F0FF">Hits</td>
+<td class="c" width="80" bgcolor="#2EA495">Bandwidth (MiB)</td>
+</tr>
+EOH
+    for my $domain (sort {
+        ($stats{$b}->{$sort_by} || 0)
+            <=>
+        ($stats{$a}->{$sort_by} || 0)
+    } keys %stats) {
+        my $unique    = $stats{$domain}->{'unique'}    || 0;
+        my $visits    = $stats{$domain}->{'visits'}    || 0;
+        my $pages     = $stats{$domain}->{'pages'}     || 0;
+        my $hits      = $stats{$domain}->{'hits'}      || 0;
+        my $bandwidth = $stats{$domain}->{'bandwidth'} || 0;
+
+        my $bw_mib = sprintf "%d", $bandwidth / (1024*1024);
+        print <<"EOT"
+<tr>
+<td class="l">$domain</td>
+<td class="r">$unique</td>
+<td class="r">$visits</td>
+<td class="r">$pages</td>
+<td class="r">$hits</td>
+<td class="r">$bw_mib</td>
+</tr>
+EOT
+    }
+    print <<'EOF';
+</table>
+</body>
+</html>
+EOF
+}
+
+sub parse_logfile {
+    my ($fh, $domain) = @_;
+    my $section = 'pre';
+
+    while (my $line = <$fh>) {
+        chomp $line;
+
+        if ($line =~ m{\A BEGIN_(\w+)\s}xms) {
+            $section = lc($1);
+            next;
+        }
+        if ($line =~ m{\A END_}xms) {
+            $section = '';
+            next;
+        }
+
+        $handlers{$section}->($domain, $line) if exists $handlers{$section};
+    }
+}
+
+sub section_general {
+    my ($domain, $line) = @_;
+    
+    $stats{$domain}->{'visits'} += $+{'visits'}
+        if $line =~ m{\A TotalVisits \s+ (?<visits>\d+)}xms;
+
+    $stats{$domain}->{'unique'} += $+{'unique'}
+        if $line =~ m{\A TotalUnique \s+ (?<unique>\d+)}xms;
+}
+
+sub section_day {
+    my ($domain, $line) = @_;
+
+    return unless $line =~ m{
+        \A \d+            \s+
+        (?<pages>\d+)     \s+
+        (?<hits>\d+)      \s+
+        (?<bandwidth>\d+) \s+
+    }xms;
+    $stats{$domain}->{'pages'}     += $+{'pages'};
+    $stats{$domain}->{'hits'}      += $+{'hits'};
+    $stats{$domain}->{'bandwidth'} += $+{'bandwidth'};
+};
+__END__
+
+=head1 NAME
+
+awstats-cd - generate per-domain summary from awstats files
+
+=head1 SYNOPSIS
+
+    awstats-cd [options] [FILE...]
+
+=head1 DESCRIPTION
+
+Awstats-cd makes static html pages with some basic statistics about multiple
+domains.
+
+=head1 FILE SELECTION
+
+All files should be passed at once on command line. Some examples:
+
+    awstats-cd /var/lib/awstats/awstats012010*.txt >2010_01.html
+
+    find /var/lib/awstats/ -type f -name 'awstats..2010\.txt' -print0 \
+        | xargs -r0 awstats-cd >index.html
+
+=head1 OPTIONS
+
+=over 4
+
+=back
+
+=head1 COPYRIGHT & LICENSE
+
+Copyright 2010 Rafał Kupka
+This program is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
+
+=cut
