@@ -83,6 +83,18 @@ if ($xls_file) {
 
 exit;
 
+# returns list od domains sorted in choosen order
+sub get_sorted_domains {
+
+    return sort keys %stats if $sort_by eq 'domain';
+
+    return sort {
+        ($stats{$b}->{$sort_by} || 0)
+            <=>
+        ($stats{$a}->{$sort_by} || 0)
+    } keys %stats;
+}
+
 sub write_xls {
     my ($filename) = @_;
 
@@ -115,11 +127,7 @@ sub write_xls {
 
     my $row = 2; # start at row 2
 
-    for my $domain (sort {
-        ($stats{$b}->{$sort_by} || 0)
-            <=>
-        ($stats{$a}->{$sort_by} || 0)
-    } keys %stats) {
+    for my $domain ( get_sorted_domains() ) {
         $worksheet->write( $row, 0, $domain);
         $worksheet->write( $row, 1, $stats{$domain}->{'unique'}    || 0);
         $worksheet->write( $row, 2, $stats{$domain}->{'visits'}    || 0);
@@ -162,11 +170,7 @@ EOH
     my $domain_counter = $html_len;
 
     DOMAIN:
-    for my $domain (sort {
-        ($stats{$b}->{$sort_by} || 0)
-            <=>
-        ($stats{$a}->{$sort_by} || 0)
-    } keys %stats) {
+    for my $domain ( get_sorted_domains() ) {
         last DOMAIN unless $domain_counter--;
 
         my $unique    = $stats{$domain}->{'unique'}    || 0;
@@ -275,8 +279,8 @@ Show NUMBER of domains on html page (default 20).
 
 =item B<--sort_by=FIELD>
 
-Sort statistics by field. Available: unique, visits, pages, hits and (default)
-bandwidth.
+Sort statistics by field. Available: domain, unique, visits, pages, hits and
+(default) bandwidth.
 
 =item B<--no-html>
 
