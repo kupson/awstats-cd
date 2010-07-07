@@ -85,14 +85,15 @@ exit;
 
 # returns list od domains sorted in choosen order
 sub get_sorted_domains {
+    my ($by, $stats_ref) = @_;
 
-    return sort keys %stats if $sort_by eq 'domain';
+    return sort keys %$stats_ref if $by eq 'domain';
 
     return sort {
-        ($stats{$b}->{$sort_by} || 0)
+        ($stats_ref->{$b}->{$by} || 0)
             <=>
-        ($stats{$a}->{$sort_by} || 0)
-    } keys %stats;
+        ($stats_ref->{$a}->{$by} || 0)
+    } keys %$stats_ref;
 }
 
 sub write_xls {
@@ -127,7 +128,9 @@ sub write_xls {
 
     my $row = 2; # start at row 2
 
-    for my $domain ( get_sorted_domains() ) {
+    for my $domain (
+        get_sorted_domains( $sort_by, \%stats)
+    ) {
         $worksheet->write( $row, 0, $domain);
         $worksheet->write( $row, 1, $stats{$domain}->{'unique'}    || 0);
         $worksheet->write( $row, 2, $stats{$domain}->{'visits'}    || 0);
@@ -170,7 +173,9 @@ EOH
     my $domain_counter = $html_len;
 
     DOMAIN:
-    for my $domain ( get_sorted_domains() ) {
+    for my $domain (
+        get_sorted_domains( $sort_by, \%stats)
+    ) {
         last DOMAIN unless $domain_counter--;
 
         my $unique    = $stats{$domain}->{'unique'}    || 0;
