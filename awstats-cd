@@ -65,7 +65,13 @@ for my $filename (@ARGV) {
     close $fh;
 }
 
-write_html() if $do_html;
+if ($do_html) {
+    write_html( \%stats, {
+            title    => $title,
+            sort_by  => $sort_by,
+            html_len => $html_len,
+    });
+}
 
 if ($xls_file) {
     # Check if required module is present
@@ -77,7 +83,11 @@ if ($xls_file) {
         warn "Please install Spreadsheet::WriteExcel.\n";
     } else {
         Spreadsheet::WriteExcel->import();
-        write_xls($xls_file);
+        write_xls(\%stats, {
+            filename => $xls_file,
+            title    => $title,
+            sort_by  => $sort_by,
+        });
     }
 }
 
@@ -97,7 +107,11 @@ sub get_sorted_domains {
 }
 
 sub write_xls {
-    my ($filename) = @_;
+    my ( $stats_ref, $opts_ref ) = @_;
+
+    my $filename = $opts_ref->{'filename'};
+    my $sort_by  = $opts_ref->{'sort_by'};
+    my $title    = $opts_ref->{'title'};
 
     my $workbook = Spreadsheet::WriteExcel->new($filename);
     die "Cannot create ${filename}: $!\n" unless defined $workbook;
@@ -129,14 +143,14 @@ sub write_xls {
     my $row = 2; # start at row 2
 
     for my $domain (
-        get_sorted_domains( $sort_by, \%stats)
+        get_sorted_domains( $sort_by, $stats_ref)
     ) {
         $worksheet->write( $row, 0, $domain);
-        $worksheet->write( $row, 1, $stats{$domain}->{'unique'}    || 0);
-        $worksheet->write( $row, 2, $stats{$domain}->{'visits'}    || 0);
-        $worksheet->write( $row, 3, $stats{$domain}->{'pages'}     || 0);
-        $worksheet->write( $row, 4, $stats{$domain}->{'hits'}      || 0);
-        $worksheet->write( $row, 6, $stats{$domain}->{'bandwidth'} || 0);
+        $worksheet->write( $row, 1, $stats_ref->{$domain}->{'unique'}    || 0);
+        $worksheet->write( $row, 2, $stats_ref->{$domain}->{'visits'}    || 0);
+        $worksheet->write( $row, 3, $stats_ref->{$domain}->{'pages'}     || 0);
+        $worksheet->write( $row, 4, $stats_ref->{$domain}->{'hits'}      || 0);
+        $worksheet->write( $row, 6, $stats_ref->{$domain}->{'bandwidth'} || 0);
         $worksheet->write( $row, 5, '=G'. ($row + 1) .'/(1024 * 1024)');
         $row++;
     }
@@ -145,6 +159,11 @@ sub write_xls {
 }
 
 sub write_html {
+    my ( $stats_ref, $opts_ref ) = @_;
+
+    my $sort_by  = $opts_ref->{'sort_by'};
+    my $title    = $opts_ref->{'title'};
+
     print <<"EOH";
 <!DOCTYPE HTML PUBLIC -//W3C//DTD HTML 4.01 Transitional//EN>
 <html>
@@ -170,19 +189,19 @@ td.r { text-align: right; }
 </tr>
 EOH
 
-    my $domain_counter = $html_len;
+    my $domain_counter = $opts_ref->{'html_len'};
 
     DOMAIN:
     for my $domain (
-        get_sorted_domains( $sort_by, \%stats)
+        get_sorted_domains( $sort_by, $stats_ref)
     ) {
         last DOMAIN unless $domain_counter--;
 
-        my $unique    = $stats{$domain}->{'unique'}    || 0;
-        my $visits    = $stats{$domain}->{'visits'}    || 0;
-        my $pages     = $stats{$domain}->{'pages'}     || 0;
-        my $hits      = $stats{$domain}->{'hits'}      || 0;
-        my $bandwidth = $stats{$domain}->{'bandwidth'} || 0;
+        my $unique    = $stats_ref->{$domain}->{'unique'}    || 0;
+        my $visits    = $stats_ref->{$domain}->{'visits'}    || 0;
+        my $pages     = $stats_ref->{$domain}->{'pages'}     || 0;
+        my $hits      = $stats_ref->{$domain}->{'hits'}      || 0;
+        my $bandwidth = $stats_ref->{$domain}->{'bandwidth'} || 0;
 
         my $bw_mib = sprintf "%d", $bandwidth / (1024*1024);
         print <<"EOT"
