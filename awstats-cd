@@ -12,6 +12,7 @@ our $VERSION = '0.10';
 my $title     = 'AWStats Totals';
 my $html_len  = 20;
 my $sort_by   = 'bandwidth';
+my $link_to   = '';
 my $do_html   = 1;
 my $xls_file  = '';
 my $show_help = 0;
@@ -21,6 +22,7 @@ GetOptions(
     'title=s'   => \$title,
     'length=i'  => \$html_len,
     'sort_by=s' => \$sort_by,
+    'link_to=s' => \$link_to,
     'html!'     => \$do_html,
     'xls=s'     => \$xls_file,
     'help|?'    => \$show_help,
@@ -70,6 +72,7 @@ if ($do_html) {
             title    => $title,
             sort_by  => $sort_by,
             html_len => $html_len,
+            link_to  => $link_to,
     });
 }
 
@@ -163,6 +166,7 @@ sub write_html {
 
     my $sort_by  = $opts_ref->{'sort_by'};
     my $title    = $opts_ref->{'title'};
+    my $link_to  = $opts_ref->{'link_to'};
 
     print <<"EOH";
 <!DOCTYPE HTML PUBLIC -//W3C//DTD HTML 4.01 Transitional//EN>
@@ -204,9 +208,18 @@ EOH
         my $bandwidth = $stats_ref->{$domain}->{'bandwidth'} || 0;
 
         my $bw_mib = sprintf "%d", $bandwidth / (1024*1024);
+        my $domain_info;
+
+        if ($link_to) {
+            my $link = sprintf $link_to, $domain;
+            $domain_info = qq{<a href="$link">$domain</a>};
+        } else {
+            $domain_info = $domain;
+        }
+
         print <<"EOT"
 <tr>
-<td class="l">$domain</td>
+<td class="l">$domain_info</td>
 <td class="r">$unique</td>
 <td class="r">$visits</td>
 <td class="r">$pages</td>
@@ -305,6 +318,13 @@ Show NUMBER of domains on html page (default 20).
 
 Sort statistics by field. Available: domain, unique, visits, pages, hits and
 (default) bandwidth.
+
+=item B<--link_to=URL_PATTERN>
+
+Show domain names as links to full AWStats pages, %s in this pattern is
+replaced by domain name. For example:
+
+    --link-to "https://awstats.example.com/cgi-bin/awstats.pl?config=%s"
 
 =item B<--no-html>
 
