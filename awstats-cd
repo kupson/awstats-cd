@@ -13,6 +13,7 @@ my $title     = 'AWStats Totals';
 my $html_len  = 20;
 my $sort_by   = 'bandwidth';
 my $do_html   = 1;
+my $xls_file  = '';
 my $show_help = 0;
 
 # parse command line options
@@ -21,6 +22,7 @@ GetOptions(
     'length=i'  => \$html_len,
     'sort_by=s' => \$sort_by,
     'html!'     => \$do_html,
+    'xls=s'     => \$xls_file,
     'help|?'    => \$show_help,
 ) or pod2usage(2);
 
@@ -65,7 +67,71 @@ for my $filename (@ARGV) {
 
 write_html() if $do_html;
 
+if ($xls_file) {
+    # Check if required module is present
+    eval {
+        require Spreadsheet::WriteExcel;
+    };
+
+    if ($@) {
+        warn "Please install Spreadsheet::WriteExcel.\n";
+    } else {
+        Spreadsheet::WriteExcel->import();
+        write_xls($xls_file);
+    }
+}
+
 exit;
+
+sub write_xls {
+    my ($filename) = @_;
+
+    my $workbook = Spreadsheet::WriteExcel->new($filename);
+    die "Cannot create ${filename}: $!\n" unless defined $workbook;
+
+    my $worksheet = $workbook->add_worksheet($title);
+
+    my $fmt_header = $workbook->add_format(
+        color  => 'gray',
+        bold   => 1,
+        align  => 'center',
+        shrink => 1,
+    );
+
+    my @col_names = (
+        'Statistics of',
+        'Unique visitors',
+        'Number of visits',
+        'Pages',
+        'Hits',
+        'Bandwidth (MiB)',
+        'Bandwidth (B)',
+    );
+
+    $worksheet->set_column(0, 0, 60);
+    $worksheet->set_column(1, $#col_names, 20);
+
+    $worksheet->write( 0, 0, \@col_names, $fmt_header );
+
+    my $row = 2; # start at row 2
+
+    for my $domain (sort {
+        ($stats{$b}->{$sort_by} || 0)
+            <=>
+        ($stats{$a}->{$sort_by} || 0)
+    } keys %stats) {
+        $worksheet->write( $row, 0, $domain);
+        $worksheet->write( $row, 1, $stats{$domain}->{'unique'}    || 0);
+        $worksheet->write( $row, 2, $stats{$domain}->{'visits'}    || 0);
+        $worksheet->write( $row, 3, $stats{$domain}->{'pages'}     || 0);
+        $worksheet->write( $row, 4, $stats{$domain}->{'hits'}      || 0);
+        $worksheet->write( $row, 6, $stats{$domain}->{'bandwidth'} || 0);
+        $worksheet->write( $row, 5, '=G'. ($row + 1) .'/(1024 * 1024)');
+        $row++;
+    }
+
+    $workbook->close();
+}
 
 sub write_html {
     print <<"EOH";
@@ -215,6 +281,11 @@ bandwidth.
 =item B<--no-html>
 
 Disable html output.
+
+=item B<--xls=FILENAME>
+
+Write XLS (Excel) file with statsistics. Requires Spreadsheet::WriteExcel
+installed on system.
 
 =item B<--help>
 
