@@ -90,6 +90,7 @@ if ($xls_file) {
             filename => $xls_file,
             title    => $title,
             sort_by  => $sort_by,
+            link_to  => $link_to,
         });
     }
 }
@@ -115,6 +116,7 @@ sub write_xls {
     my $filename = $opts_ref->{'filename'};
     my $sort_by  = $opts_ref->{'sort_by'};
     my $title    = $opts_ref->{'title'};
+    my $link_to  = $opts_ref->{'link_to'};
 
     my $workbook = Spreadsheet::WriteExcel->new($filename);
     die "Cannot create ${filename}: $!\n" unless defined $workbook;
@@ -148,7 +150,12 @@ sub write_xls {
     for my $domain (
         get_sorted_domains( $sort_by, $stats_ref)
     ) {
-        $worksheet->write( $row, 0, $domain);
+        if ($link_to) {
+            my $link = sprintf $link_to, $domain;
+            $worksheet->write_url( $row, 0, $link, $domain);
+        } else {
+            $worksheet->write( $row, 0, $domain);
+        }
         $worksheet->write( $row, 1, $stats_ref->{$domain}->{'unique'}    || 0);
         $worksheet->write( $row, 2, $stats_ref->{$domain}->{'visits'}    || 0);
         $worksheet->write( $row, 3, $stats_ref->{$domain}->{'pages'}     || 0);
