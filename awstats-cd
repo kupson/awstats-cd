@@ -249,8 +249,8 @@ awstats-cd - generate per-domain summary from awstats files
 
 =head1 DESCRIPTION
 
-Awstats-cd makes static html pages with some basic statistics about multiple
-domains.
+Awstats-cd make static html pages with some basic statistics about multiple
+domains. Optionally it can also create XLS (Excel) files.
 
 =head1 FILE SELECTION
 
@@ -284,7 +284,7 @@ Disable html output.
 
 =item B<--xls=FILENAME>
 
-Write XLS (Excel) file with statsistics. Requires Spreadsheet::WriteExcel
+Write XLS (Excel) file with statistics. Requires Spreadsheet::WriteExcel
 installed on system.
 
 =item B<--help>
