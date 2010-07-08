@@ -76,26 +76,33 @@ if ($do_html) {
     });
 }
 
-if ($xls_file) {
-    # Check if required module is present
+if ($xls_file && xls_modules_check()) {
+    write_xls(\%stats, {
+        filename => $xls_file,
+        title    => $title,
+        sort_by  => $sort_by,
+        link_to  => $link_to,
+    });
+}
+
+exit;
+
+# Check if required module is present
+sub xls_modules_check {
+
     eval {
         require Spreadsheet::WriteExcel;
     };
 
     if ($@) {
         warn "Please install Spreadsheet::WriteExcel.\n";
-    } else {
-        Spreadsheet::WriteExcel->import();
-        write_xls(\%stats, {
-            filename => $xls_file,
-            title    => $title,
-            sort_by  => $sort_by,
-            link_to  => $link_to,
-        });
+        return;
     }
-}
 
-exit;
+    Spreadsheet::WriteExcel->import();
+
+    return 1;
+}
 
 # returns list od domains sorted in choosen order
 sub get_sorted_domains {
