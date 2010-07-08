@@ -19,13 +19,13 @@ my $show_help = 0;
 
 # parse command line options
 GetOptions(
-    'title=s'   => \$title,
-    'length=i'  => \$html_len,
-    'sort_by=s' => \$sort_by,
-    'link_to=s' => \$link_to,
-    'html!'     => \$do_html,
-    'xls=s'     => \$xls_file,
-    'help|?'    => \$show_help,
+    'title=s'           => \$title,
+    'length=i'          => \$html_len,
+    'sort_by|sort-by=s' => \$sort_by,
+    'link_to|link-to=s' => \$link_to,
+    'html!'             => \$do_html,
+    'xls=s'             => \$xls_file,
+    'help|?'            => \$show_help,
 ) or pod2usage(2);
 
 if (@ARGV == 0) {
@@ -321,12 +321,12 @@ Change page title. Default is 'AWStats Totals'
 
 Show NUMBER of domains on html page (default 20).
 
-=item B<--sort_by=FIELD>
+=item B<--sort_by=FIELD>, B<--sort-by=FIELD>
 
 Sort statistics by field. Available: domain, unique, visits, pages, hits and
 (default) bandwidth.
 
-=item B<--link_to=URL_PATTERN>
+=item B<--link_to=URL_PATTERN>, B<--link-to=URL_PATTERN>
 
 Show domain names as links to full AWStats pages, %s in this pattern is
 replaced by domain name. For example:
